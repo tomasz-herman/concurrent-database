@@ -19,16 +19,20 @@ public class Table implements Serializable {
     }
 
     public DataRow read(Long id){
-        mapLock.readLock().lock();
+//        mapLock.readLock().lock();
         DataRow dbRow = dbCache.get(id);
-        mapLock.readLock().unlock();
+        System.out.println("Read data:" + dbRow.getId() + " from row: " + id);
+//        mapLock.readLock().unlock();
         return dbRow;
     }
 
-    public void write(DataRow data){
+    public long write(DataRow data){
         mapLock.readLock().lock();
-        dbCache.put(indexer.getAndIncrement(), data);
+        long i = indexer.getAndIncrement();
+        System.out.println("Writing to db: " + data.getId() + " from row: " + i);
+        dbCache.put(i, data);
         mapLock.readLock().unlock();
+        return i;
     }
 
     public synchronized void dump(String path){
