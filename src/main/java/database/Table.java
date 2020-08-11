@@ -15,6 +15,11 @@ public class Table implements Serializable {
     private final AtomicLong indexer = new AtomicLong(1);
     private final String tableId;
     private final Map<Long, DataRow> dbCache = new ConcurrentSkipListMap<>();
+    private final TableObserver tableObserver = new TableObserver();
+
+    public TableObserver getTableObserver() {
+        return tableObserver;
+    }
 
     public Table(String tableId) {
         this.tableId = tableId;
@@ -22,14 +27,14 @@ public class Table implements Serializable {
 
     public DataRow read(Long id){
         DataRow dbRow = dbCache.get(id);
-        System.out.println("Read data:" + dbRow.getId() + " from row: " + id);
+        tableObserver.informListeners("Read data:" + dbRow.getId() + " from row: " + id);
         return dbRow;
     }
 
     public long write(DataRow data){
         writeDumpLock.readLock().lock();
         long i = indexer.getAndIncrement();
-        System.out.println("Writing to db: " + data.getId() + " from row: " + i);
+        tableObserver.informListeners("Writing to db: " + data.getId() + " from row: " + i);
         dbCache.put(i, data);
         writeDumpLock.readLock().unlock();
         return i;
@@ -50,9 +55,9 @@ public class Table implements Serializable {
             out.writeObject(this);
             out.close();
             fileOut.close();
-            System.out.println("Table saved in: " + path);
+            tableObserver.informListeners("Table saved in: " + path);
         } catch (IOException i) {
-            System.out.println(i.getMessage());
+            tableObserver.informListeners(i.getMessage());
         }
         writeDumpLock.writeLock().unlock();
     }

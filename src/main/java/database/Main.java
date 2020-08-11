@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 public class Main {
     public static void main(String[] args) {
         Table firstTable = new Table("first");
+        firstTable.getTableObserver().registerListener(new Logger());
         for (int i = 0; i < 50; i++) {
             new Thread(new Client(firstTable)).start();
         }
