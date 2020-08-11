@@ -12,5 +12,6 @@ public class Main {
         }
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(new TableSerializer(firstTable), 10, 10, TimeUnit.SECONDS);
+        new Thread(new SummingClient(firstTable)).start();
     }
 }

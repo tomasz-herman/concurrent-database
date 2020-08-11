@@ -3,9 +3,8 @@ package database;
 import java.util.Random;
 
 public class Client implements Runnable{
-    private Table currentTable;
+    protected Table currentTable;
     private Random r = new Random();
-
 
     public Client(Table currentTable) {
         this.currentTable = currentTable;
@@ -33,7 +32,7 @@ public class Client implements Runnable{
     }
 
 
-    private void sleep(int len){
+    protected void sleep(int len){
         try {
             Thread.sleep(len);
         } catch (InterruptedException e) {

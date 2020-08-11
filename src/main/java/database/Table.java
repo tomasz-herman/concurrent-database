@@ -6,10 +6,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class Table implements Serializable {
 
-    private final ReadWriteLock mapLock = new ReentrantReadWriteLock();
+    private final ReadWriteLock writeDumpLock = new ReentrantReadWriteLock();
     private final AtomicLong indexer = new AtomicLong(1);
     private final String tableId;
     private final Map<Long, DataRow> dbCache = new ConcurrentSkipListMap<>();
@@ -19,24 +21,29 @@ public class Table implements Serializable {
     }
 
     public DataRow read(Long id){
-//        mapLock.readLock().lock();
         DataRow dbRow = dbCache.get(id);
         System.out.println("Read data:" + dbRow.getId() + " from row: " + id);
-//        mapLock.readLock().unlock();
         return dbRow;
     }
 
     public long write(DataRow data){
-        mapLock.readLock().lock();
+        writeDumpLock.readLock().lock();
         long i = indexer.getAndIncrement();
         System.out.println("Writing to db: " + data.getId() + " from row: " + i);
         dbCache.put(i, data);
-        mapLock.readLock().unlock();
+        writeDumpLock.readLock().unlock();
         return i;
     }
 
-    public synchronized void dump(String path){
-        mapLock.writeLock().lock();
+    public <T> T readAll(Function<Stream<Map.Entry<Long, DataRow>>, T> callback) {
+        writeDumpLock.writeLock().lock();
+        T result = callback.apply(dbCache.entrySet().parallelStream());
+        writeDumpLock.writeLock().unlock();
+        return result;
+    }
+
+    public void dump(String path){
+        writeDumpLock.writeLock().lock();
         try {
             FileOutputStream fileOut = new FileOutputStream(path);
             ObjectOutputStream out = new ObjectOutputStream(fileOut);
@@ -47,10 +54,10 @@ public class Table implements Serializable {
         } catch (IOException i) {
             System.out.println(i.getMessage());
         }
-        mapLock.writeLock().unlock();
+        writeDumpLock.writeLock().unlock();
     }
 
-    public static synchronized Table loadTable(String path){
+    public static Table loadTable(String path){
         Table newTable = null;
         try {
             FileInputStream fileOut = new FileInputStream(path);
@@ -59,7 +66,7 @@ public class Table implements Serializable {
             in.close();
             fileOut.close();
             System.out.println("Table saved in: " + path);
-            newTable.mapLock.writeLock().unlock();
+            newTable.writeDumpLock.writeLock().unlock();
         } catch (IOException i) {
             System.out.println(i.getMessage());
         } catch (ClassNotFoundException e) {
